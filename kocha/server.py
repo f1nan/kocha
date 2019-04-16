@@ -43,21 +43,17 @@ class KochaTcpServer:
     Die maximale Anzahl an Bytes die auf einmal empfangen werden kann.
     """
 
-    def __init__(self, ip_address="", port=36037):
+    def __init__(self, host="", port=36037):
         """
         Initialisiert ein Object der Klasse KochaTcpServer.
 
         Args:
-            ip_address: Die IP-Adresse des KOCHA-Servers.
+            host: Der Host des KOCHA-Servers.
             port: Der Port auf dem KOCHA-Server lauscht.
         """
-        # IP-Adresse und Port des KOCHA-Servers merken
+        # Host und Port des KOCHA-Servers merken
         self.port = port
-        self.ip_address = ip_address
-
-        self.actions = dict()
-        self.actions[b"/ping"] = self.on_ping
-        self.actions[b"/members"] = self.on_members
+        self.host = host
 
         # Set zum Speichern der Clientverbindungen initialisieren
         self.clients = {}
@@ -74,7 +70,7 @@ class KochaTcpServer:
 
         # Den erstellten Socket an die uebergene IP-Adresse und den
         # uebergebene Port binden
-        self.socket.bind((self.ip_address, self.port))
+        self.socket.bind((self.host, self.port))
 
         # Server gestatten Verbindungen anzunehmen
         self.socket.listen(5)
@@ -147,6 +143,7 @@ class KochaTcpServer:
                   or message.content.startswith("/quit ")):
                 # TODO: Den Client vom Server abmelden
                 self.on_quit(client)
+                break
             elif (message.content.startswith("/l ")
                   or message.content.startswith("/list ")):
                 # TODO: Dem Client eine Liste mit allen angemeldeten
@@ -156,7 +153,7 @@ class KochaTcpServer:
                 # Die Nachricht im Chat veröffentlichen
                 self.on_broadcast(client, message)
 
-        print("Connection closed")
+        print("Closed connection of " + client.address)
 
     def login(self, client, message):
         """
@@ -223,7 +220,11 @@ class KochaTcpServer:
         """
         Den Client am KOCHA-Server abmelden.
         """
-        # TODO: Methode on_quit implementieren
+        # Die Clientverbindung schließen
+        client.socket.close()
+
+        # Den Client aus der Liste der angemeldenten Clients entfernen
+        del self.clients[client]
 
     def on_help(self, client):
         """
