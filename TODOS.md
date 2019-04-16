@@ -32,3 +32,7 @@
         - [ ] Port des Servers muss konfigurierbar sein
     - [ ] Installation des Clients
         - [ ] IP-Adresse und Port des Servers müssen einstellbar sein
+
+- [ ] Allgemeine Aufgaben
+    - [ ] README ueberarbeiten
+    - [ ] Lizenz hinzufuegen
