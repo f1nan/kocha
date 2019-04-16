@@ -18,7 +18,7 @@ class KochaUi:
 
     def __init__(self, stdscr=None, prompt="> "):
         """
-        Initialisert ein Object der Klasse Ui.
+        Initialisert ein Object der Klasse KochaUi.
 
         Args:
             stdscr: Window-Object, das den gesamten Bilschirm repraesentiert.
