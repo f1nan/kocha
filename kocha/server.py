@@ -8,8 +8,8 @@ from socket import socket
 from socket import AF_INET
 from socket import SOCK_STREAM
 
-from parameter import Parameter
-from payload import Payload, as_payload
+from utils import JsonUtils
+from utils import KochaMessage
 
 
 class KochaTcpClientWrapper:
@@ -102,21 +102,22 @@ class KochaTcpServer:
         """
         while not self.stop:
             # Daten vom Client in Form eines Bytes-Objects empfangen.
-            data = client.recv(self.BUFFER_SIZE)
+            json_data = client.recv(self.BUFFER_SIZE)
 
             # Wenn keine Daten empfange wurden, die Bearbeitung der
             # Anfragen dieses Clients abbrechen
-            if not data:
+            if not json_data:
                 break
 
             # Die empfangenen Daten deserialisieren
-            message = json.loads(data, object_hook=as_payload)
+            message = JsonUtils.to_kocha_message(json_data)
 
             # Wenn der Client unbekannt ist, Anmeldung am Server
             # versuchen
             if client not in self.clients:
-                self.login(client, data)
+                self.try_login(client, message.content)
 
+                # TODO: Aktion bei Misserfolg stimmt nicht!
                 # Wenn die Anmeldung gescheitert ist, keine weiteren
                 # Anfragen dieses Clients bearbeiten
                 if client not in self.clients:
@@ -155,13 +156,13 @@ class KochaTcpServer:
 
         print("Closed connection of " + client.address)
 
-    def login(self, client, message):
+    def try_login(self, client, content):
         """
         Einen KOCHA-Client am KOCHA-Server anmelden.
 
         Args:
             client: Die Daten der Clientverbindung.
-            message: Die empfangene Nachricht.
+            content: Der Inhalt der Nachricht.
         """
         command, alias, *_ = message.content.split()
         if command == "/login":
