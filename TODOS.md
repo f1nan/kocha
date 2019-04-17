@@ -12,8 +12,8 @@
         - [x] Es muss eine Titelzeile mit dem Namen und der Version des Programms geben
         - [x] Es muss ein Nachrichtenfenster für die empfangenen Nachrichten geben
             - [x] Empfangene Nachrichten müssen im Nachrichtenfenster erscheinen; dabei darf die Eingabe von Text nicht gestoert werden
-            - [ ] Bei Erwaehnung des eigenen Alias muss dieser farblich hervorgehoben werden
-            - [ ] Persoenliche Nachrichten muessen farblich hervorgehoben werden
+            - [x] Bei Erwaehnung des eigenen Alias muss dieser farblich hervorgehoben werden
+            - [x] Persoenliche Nachrichten muessen farblich hervorgehoben werden
         - [x] Es muss eine Eingabezeile für Text geben
             - [x] Zu langer Text muss am Zeilenanfang abgeschnitten werden, sodass der Schreibprozess nicht gestört wird
             - [x] Beim Drücken von Enter muss der Text im Nachrichtenfenster erscheinen und die Eingabezeile muss geleert werden
@@ -23,9 +23,9 @@
 - [ ] Es muss ein Server-Programm geben
     - [x] Clients müssen sich mit einem Alias am Server anmelden können
         - [x] Wenn ein Alias bereits verwendet wird, darf die Anmeldung nicht funktionieren
-    - [ ] Server muss öffentliche Nachrichten im Chat an alle Clients broadcasten können
-    - [ ] Server muss persönliche Nachrichten nur an den adressierten Empfänger weiterleiten können
-    - [ ] Server muss mehrere Clients gleichzeitig bedienen können
+    - [ ] Server muss oeffentliche Nachrichten im Chat an alle Clients broadcasten können
+    - [ ] Server muss persoenliche Nachrichten nur an den adressierten Empfaenger weiterleiten können
+    - [x] Server muss mehrere Clients gleichzeitig bedienen können
     - [x] Server muss beim "shutdown" alle Clien-Threads terminieren
 
 - [ ] Installation
