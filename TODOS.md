@@ -37,4 +37,4 @@
 
 - [ ] Allgemeine Aufgaben
     - [ ] README ueberarbeiten
-    - [ ] Lizenz hinzufuegen
+    - [x] Lizenz hinzufuegen
