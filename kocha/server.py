@@ -3,34 +3,32 @@ Modul mit Klassen und Methoden für den KOCHA-Server.
 """
 
 import json
+import locale
+import socket
 import threading
-from socket import socket
-from socket import AF_INET
-from socket import SOCK_STREAM
 
-from utils import JsonUtils
-from utils import KochaMessage
+from . import utils
 
 
-class KochaTcpClientWrapper:
+class KochaTcpConnection(utils.KochaTcpSocketWrapper):
     """
-    Klasse kapselt die Verbindung zu einem KochaTcpClient.
+    Klasse kapselt die Verbindung einens KOCHA-Clients mit dem
+    KOCHA-Server.
     """
 
     def __init__(self, socket, address):
         """
-        Initialisiert ein Object der Klasse KochaTcpClientWrapper.
+        Intialisiert ein Object der Klasse KochaTcpConnectionWrapper.
 
         Args:
             socket: Das socket-Object des KochaTcpClients.
             address: Die Adressinformationen des KochaTcpClients.
         """
-        self.socket = socket
-        self.address =address
+        self.address = address
+        super().__init__(socket)
 
 
-class KochaTcpServer:
-
+class KochaTcpServer(utils.KochaTcpSocketWrapper):
     """
     Der KochaTcpServer kommuniziert mit den KOCHA-Clients via TCP/IP.
     Er stellt den Clients mithilfe von Kommandos bestimmte
@@ -38,12 +36,12 @@ class KochaTcpServer:
     um mehrere Clients gleichzeitig bedienen zu koennen.
     """
 
-    BUFFER_SIZE = 4096
+    ALIAS = "KOCHA-Server"
     """
-    Die maximale Anzahl an Bytes die auf einmal empfangen werden kann.
+    Der Alias des KOCHA-Servers.
     """
 
-    def __init__(self, host="", port=36037):
+    def __init__(self, host="", port=9090):
         """
         Initialisiert ein Object der Klasse KochaTcpServer.
 
@@ -66,14 +64,17 @@ class KochaTcpServer:
         self.stop = False
 
         # Einen TCP-Socket für den KOCHA-Server erstellen
-        self.socket = socket(AF_INET, SOCK_STREAM)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         # Den erstellten Socket an die uebergene IP-Adresse und den
         # uebergebene Port binden
-        self.socket.bind((self.host, self.port))
+        sock.bind((self.host, self.port))
 
         # Server gestatten Verbindungen anzunehmen
-        self.socket.listen(5)
+        sock.listen(5)
+
+        # Socket merken
+        super().__init__(sock)
 
     def loop(self):
         """
@@ -84,8 +85,11 @@ class KochaTcpServer:
             # Auf eine eingehende Clientverbindung warten
             client_socket, address = self.socket.accept()
 
+            # Timeout fuer den Client-Socket setzen
+            client_socket.settimeout(utils.KOCHA_TIMEOUT)
+
             # Die Verbinungsdaten des Clients kapseln
-            client = KochaTcpClientWrapper(client_socket, address)
+            client = KochaTcpConnection(client_socket, address)
 
             print("Connection from", client.address)
 
@@ -101,60 +105,51 @@ class KochaTcpServer:
             client: Die Daten der Clientverbindung.
         """
         while not self.stop:
-            # Daten vom Client in Form eines Bytes-Objects empfangen.
-            json_data = client.recv(self.BUFFER_SIZE)
-
-            # Wenn keine Daten empfange wurden, die Bearbeitung der
-            # Anfragen dieses Clients abbrechen
-            if not json_data:
+            # Auf eine Anfrage des Clients warten
+            request = None
+            try:
+                request = client.receive()
+            except socket.timeout:
+                continue
+            except:
+                # Den Client abmelden, da der Socket 
+                # hoechstwahrscheinlich von der anderen Seite einfach
+                # geschlossen wurde
+                self.on_quit(client)
                 break
-
-            # Die empfangenen Daten deserialisieren
-            message = JsonUtils.to_kocha_message(json_data)
 
             # Wenn der Client unbekannt ist, Anmeldung am Server
             # versuchen
             if client not in self.clients:
-                self.try_login(client, message.content)
+                self.try_login(client, request.content)
 
-                # TODO: Aktion bei Misserfolg stimmt nicht!
-                # Wenn die Anmeldung gescheitert ist, keine weiteren
-                # Anfragen dieses Clients bearbeiten
-                if client not in self.clients:
-                    break
-
-                # Bei erfolgreicher Anmeldung auf die naechste Anfrage
-                # des Clients warten
+                # Auf naechste Anfrage des Clients warten
                 continue
 
-            if (message.content.startswith("/h ")
-                or message.content.startswith("/help ")):
+            # Die Anfrage des Clients interpretieren und bearbeiten
+            if (request.content == "/h" or request.content == "/help"):
                 # Dem KOCHA-Client die Kommandouebersicht schicken
                 self.on_help(client)
-            elif (message.content.startswith("/dm ")):
+            elif (request.content == "/q" or request.content == "/quit"):
+                # TODO: Den Client vom Server abmelden
+                self.on_quit(client)
+                break
+            elif (request.content == "/l" or request.content == "/list"):
+                # TODO: Dem Client eine Liste mit allen angemeldeten
+                # Clients geben
+                self.on_list(client)
+            elif (request.content.startswith("/dm ")):
                 # Einem anderen Client eine direkte Nachricht
                 # weiterleiten
                 try:
-                    self.on_dm(client, message)
+                    self.on_dm(client, request)
                 except ValueError:
                     # TODO: Dem Client die Hilfe für das /dm- Kommando
                     # schicken
                     pass
-            elif (message.content.startswith("/q ")
-                  or message.content.startswith("/quit ")):
-                # TODO: Den Client vom Server abmelden
-                self.on_quit(client)
-                break
-            elif (message.content.startswith("/l ")
-                  or message.content.startswith("/list ")):
-                # TODO: Dem Client eine Liste mit allen angemeldeten
-                # Clients geben
-                self.on_list(client)
             else:
                 # Die Nachricht im Chat veröffentlichen
-                self.on_broadcast(client, message)
-
-        print("Closed connection of " + client.address)
+                self.on_broadcast(client, request)
 
     def try_login(self, client, content):
         """
@@ -164,10 +159,19 @@ class KochaTcpServer:
             client: Die Daten der Clientverbindung.
             content: Der Inhalt der Nachricht.
         """
-        command, alias, *_ = message.content.split()
+        print(content)
+        command, alias, *_ = content.split()
+        content = ""
         if command == "/login":
             if alias not in self.clients.values():
                 self.clients[client] = alias
+                content = "OK"
+
+        response = utils.KochaMessage(
+            content=content,
+            sender=self.ALIAS,
+            is_dm=True)
+        client.send(response)
 
     def close(self):
         """
@@ -180,22 +184,26 @@ class KochaTcpServer:
 
         # Alle Clientverbindungen schließen
         for client in self.clients:
-            client.socket.close()
+            client.close()
 
         # Den TCP-Socket des KOCHA-Servers herunterfahren und
         # anschließend die Verbindung zum Socket schließen
-        self.socket.shutdown()
-        self.socket.close()
+        self.socket.shutdown(socket.SHUT_RDWR)
+        super().close()
 
     def on_list(self, client):
         """
-        Dem anfragenden Client eine Liste aller am KOCHA-Server
-        angemeldeten Clients liefern.
+        Dem anfragenden Client eine durch Kommata getrennte Liste aller
+        am KOCHA-Server angemeldeten Clients liefern.
 
         Args:
             client: Die Daten der Clientverbindung.
         """
-        # TODO: Methode on_list implementieren
+        response = utils.KochaMessage(
+            content=", ".join(self.clients.values()),
+            sender=self.ALIAS,
+            is_dm=True)
+        client.send(response)
 
     def on_broadcast(self, client, message):
         """
@@ -222,7 +230,9 @@ class KochaTcpServer:
         Den Client am KOCHA-Server abmelden.
         """
         # Die Clientverbindung schließen
-        client.socket.close()
+        client.close()
+
+        print("Closed connection of {!r}".format(client.address))
 
         # Den Client aus der Liste der angemeldenten Clients entfernen
         del self.clients[client]
@@ -235,6 +245,10 @@ class KochaTcpServer:
 
 
 if __name__ == "__main__":
+    # Das Gebietsschema auf die Standardeinstellung des Benutzers setzen
+    locale.setlocale(locale.LC_ALL, "")
+
+    # Den KochaTcpServer auf Port 36037 starten
     try:
         server = KochaTcpServer()
         server.loop()

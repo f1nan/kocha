@@ -5,10 +5,93 @@ Modul mit Klassen und Methoden für den KOCHA-Client.
 import curses
 import locale
 import queue
+import socket
+import sys
 import threading
 import time
 
-import utils
+from . import utils
+
+
+class KochaTcpClient(utils.KochaTcpSocketWrapper):
+    """
+    Klasse fuer die Kommunikation mit dem KOCHA-Server via TCP/IP.
+    """
+
+    def __init__(self, server_host, server_port):
+        # Einen TCP-Socket für den KOCHA-Client erstellen
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        # Timeout fuer den Client-Socket setzen
+        sock.settimeout(utils.KOCHA_TIMEOUT)
+
+        # Der Alias
+        self.alias = ""
+
+        # Mit dem KOCHA-Server verbinden
+        self.is_connected = True
+        try:
+            sock.connect((server_host, server_port))
+        except Exception as e:
+            print(e, file=sys.stderr)
+            self.is_connected = False
+
+        # Den Client-Socket merken
+        super().__init__(sock)
+
+    def send(self, content):
+        """
+        Eine Nachricht an den KOCHA-Server schicken.
+
+        Args:
+            content: Der Inhalt der Nachricht.
+        """
+        # Wenn nicht angemeldet, nix machen
+        if not self.alias:
+            return
+
+        message = utils.KochaMessage(content=content, sender=self.alias)
+        super().send(message)
+
+    def close(self):
+        """
+        Den KochaTcpClient herunterfahren und schließen.
+        """
+        self.socket.shutdown(socket.SHUT_RDWR)
+        super().close()
+
+    def try_login(self, alias):
+        """
+        Versuchen den Client mit einem Alias Am KOCHA-Server anzumelden.
+
+        Args:
+            alias: Der Alias fuer die Anmeldung.
+        """
+        # Wenn nicht mit dem KOCHA-Server verbunden, nix machen
+        if not self.is_connected:
+            return
+
+        # Loginanfrage an den KOCHA-Server senden
+        request = utils.KochaMessage(content="/login " + alias)
+        data = utils.JsonUtils.to_json(request)
+        self.socket.sendall(data.encode())
+
+        # Auf Antwort des KOCHA-Servers warten (maximal 5 Versuche)
+        answer, count = None, 0
+        while answer is None and count < 5:
+            try:
+                answer = self.receive()
+            except socket.timeout:
+                pass
+
+            count += 1
+
+        print(answer.content)
+
+        # Wenn die Anmeldung erfolgreich war den Alias setzen
+        if answer is not None:
+            if answer.content == "OK":
+                self.alias = alias
 
 
 class KochaUi:
@@ -21,23 +104,24 @@ class KochaUi:
         Initialisert ein Object der Klasse KochaUi.
 
         Args:
-            stdscr: Window-Object, das den gesamten Bilschirm repraesentiert.
+            stdscr: Window-Object, das den gesamten Bilschirm
+            repraesentiert.
             prompt: Das Zeichen fuer die Eingabeaufforderung.
         """
         if stdscr is None:
-            # Die curses Bibliothek initialisieren, falls kein Hauptfenster
-            # uerbgeben wurde
+            # Die curses Bibliothek initialisieren, falls kein
+            # Hauptfenster uerbgeben wurde
             stdscr = curses.initscr()
 
             # Zeichen nicht automatisch auf dem Bildschirm ausgeben
             curses.noecho()
 
-            # Bei jeder Eingabe reagieren und nicht nur wenn Enter gedrueckt
-            # wird
+            # Bei jeder Eingabe reagieren und nicht nur wenn Enter
+            # gedrueckt wird
             curses.cbreak()
 
-            # Sonderzeichen von curses abfangen lassen, damit sie einfacher zu
-            # verarbeiten sind
+            # Sonderzeichen von curses abfangen lassen, damit sie
+            # einfacher zu verarbeiten sind
             self.stdscr.keypad(True)
 
         # Das Haupfenster merken
@@ -71,8 +155,9 @@ class KochaUi:
 
     def close(self):
         """
-        Wird beim Schließen des User Interfaces aufgerufen. Meldet den Client
-        am Server ab und stellt den Ursprungszustand des Terminals wieder her.
+        Wird beim Schließen des User Interfaces aufgerufen. Meldet den
+        Client am Server ab und stellt den Ursprungszustand des
+        Terminals wieder her.
         """
         # Terminaleinstellungen für curses wieder aufheben
         curses.nocbreak()
@@ -84,7 +169,8 @@ class KochaUi:
 
     def loop(self):
         """
-        Wartet auf Nutzereingaben und verarbeitet diese in einer Endlosschleife.
+        Wartet auf Nutzereingaben und verarbeitet diese in einer
+        Endlosschleife.
         """
         threading.Thread(target=self.get_messages_from_server).start()
 
@@ -94,7 +180,8 @@ class KochaUi:
 
             # Ausfuehren wenn die Eingabe ein Zeilenende ist
             if c == ord("\n"):
-                # Programm beenden, wenn Nutzer /q oder /quit eigegeben hat
+                # Programm beenden, wenn Nutzer /q oder /quit eigegeben
+                # hat
                 if self.input in { "/q", "/quit" }:
                     break
 
@@ -146,8 +233,8 @@ class KochaUi:
                 messages.append(message[:max_x])
                 message = message[max_x:]
 
-        # Index der aeltesten Nachricht, die im Nachrichtenfenster gezeichnet
-        # werden kann, bestimmen
+        # Index der aeltesten Nachricht, die im Nachrichtenfenster
+        # gezeichnet werden kann, bestimmen
         begin = len(self.messages) - max_y
         begin = begin if begin >= 0 else 0
 
@@ -175,7 +262,8 @@ class KochaUi:
         # Breite des Rahmens und des Cursors abziehen
         max_x -= 3
 
-        # Zeichen fuer Eingabeaufforderung und Nutzereingabe zusammensetzen
+        # Zeichen fuer Eingabeaufforderung und Nutzereingabe
+        # zusammensetzen
         text = self.prompt + self.input
 
         # Zeichenkette vorne abschneiden, wenn sie zu lang ist
@@ -201,10 +289,12 @@ class KochaUi:
     @staticmethod
     def show(stdscr):
         """
-        Wird aufgerufen um das User Interface für den KOCHA-Client aufzurufen.
+        Wird aufgerufen um das User Interface für den KOCHA-Client
+        aufzurufen.
 
         Args:
-            stdscr: Window-Object, das den gesamten Bilschirm repraesentiert.
+            stdscr: Window-Object, das den gesamten Bilschirm
+            repraesentiert.
         """
         ui = KochaUi(stdscr)
         ui.loop()
@@ -214,4 +304,4 @@ if __name__ == "__main__":
     # Das Gebietsschema auf die Standardeinstellung des Benutzers setzen
     locale.setlocale(locale.LC_ALL, "")
 
-    curses.wrapper(KochaUi.show)
+    #curses.wrapper(KochaUi.show)

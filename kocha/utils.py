@@ -3,6 +3,7 @@ Modul mit Hilfsklasse und Methoden.
 """
 
 import json
+import sys
 from datetime import datetime
 
 KOCHA_VERSION = "v1.0.0"
@@ -10,6 +11,16 @@ KOCHA_VERSION = "v1.0.0"
 Die aktuelle Versionsnummer des KOCHA-Servers und des KOCHA-Clients.
 """
 
+KOCHA_BUFSIZE = 4096
+"""
+Die maximale Anzahl an Bytes die auf einmal uebetragen werden
+duerfen.
+"""
+
+KOCHA_TIMEOUT = 2.0
+"""
+Timeout fuer Socket-Objects.
+"""
 
 class KochaMessage:
     """
@@ -112,17 +123,17 @@ class JsonUtils:
     """
 
     @staticmethod
-    def to_kocha_message(json_data):
+    def to_kocha_message(data):
         """
         Erstellt aus Daten im JSON-Format ein KochaMessage-Object.
 
         Args:
-            json_data: Daten im JSON-Format.
+            data: Daten im JSON-Format.
 
         Returns:
             Ein KochaMessage-Object.
         """
-        return json.loads(json_data, cls=KochaMessageDecoder)
+        return json.loads(data, cls=KochaMessageDecoder)
 
     @staticmethod
     def to_json(kocha_message):
@@ -136,3 +147,49 @@ class JsonUtils:
             Daten im JSON-Format.
         """
         return json.dumps(kocha_message, cls=KochaMessageEncoder)
+
+
+class KochaTcpSocketWrapper:
+    """
+    Klasse kapselt einen TCP/IP-Socket, um die Arbeit mit Sockets
+    zu vereinfachen.
+    """
+
+    def __init__(self, socket):
+        """
+        Initialisiert ein Object der Klasse KochaTcpSocketWrapper.
+
+        Args:
+            socket: Ein Socket-Object.
+        """
+        self.socket = socket
+
+    def send(self, message):
+        """
+        Eine Nachricht senden.
+        
+        Args:
+            message: Das KochaMessage-Object.
+        """
+        data = JsonUtils.to_json(message)
+        try:
+            self.socket.sendall(data.encode())
+        except Exception as e:
+            print(e, file=sys.stderr)
+
+    def receive(self):
+        """
+        Eine Nachricht empfangen.
+
+        Returns:
+            Die Nachricht.
+        """
+        data = self.socket.recv(KOCHA_BUFSIZE)
+        message = JsonUtils.to_kocha_message(data)
+        return message
+
+    def close(self):
+        """
+        Das Handle des gekapselten Socket-Objects schließen.
+        """
+        self.socket.close()
