@@ -7,10 +7,10 @@ import locale
 import socket
 import threading
 
-from . import utils
+from . import shared
 
 
-class KochaTcpConnection(utils.KochaTcpSocketWrapper):
+class KochaTcpConnection(shared.KochaTcpSocketWrapper):
     """
     Klasse kapselt die Verbindung einens KOCHA-Clients mit dem
     KOCHA-Server.
@@ -28,7 +28,7 @@ class KochaTcpConnection(utils.KochaTcpSocketWrapper):
         super().__init__(socket)
 
 
-class KochaTcpServer(utils.KochaTcpSocketWrapper):
+class KochaTcpServer(shared.KochaTcpSocketWrapper):
     """
     Der KochaTcpServer kommuniziert mit den KOCHA-Clients via TCP/IP.
     Er stellt den Clients mithilfe von Kommandos bestimmte
@@ -86,7 +86,7 @@ class KochaTcpServer(utils.KochaTcpSocketWrapper):
             client_socket, address = self.socket.accept()
 
             # Timeout fuer den Client-Socket setzen
-            client_socket.settimeout(utils.KOCHA_TIMEOUT)
+            client_socket.settimeout(shared.KOCHA_TIMEOUT)
 
             # Die Verbinungsdaten des Clients kapseln
             client = KochaTcpConnection(client_socket, address)
@@ -167,7 +167,7 @@ class KochaTcpServer(utils.KochaTcpSocketWrapper):
                 self.clients[client] = alias
                 content = "OK"
 
-        response = utils.KochaMessage(
+        response = shared.KochaMessage(
             content=content,
             sender=self.ALIAS,
             is_dm=True)
@@ -199,7 +199,7 @@ class KochaTcpServer(utils.KochaTcpSocketWrapper):
         Args:
             client: Die Daten der Clientverbindung.
         """
-        response = utils.KochaMessage(
+        response = shared.KochaMessage(
             content=", ".join(self.clients.values()),
             sender=self.ALIAS,
             is_dm=True)

@@ -1,5 +1,6 @@
 """
-Modul mit Hilfsklasse und Methoden.
+Modul mit Klassen und Methoden, die sowohl vom KOCHA-Client als auch
+vom KOCHA-Server verwendet werden.
 """
 
 import json

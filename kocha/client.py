@@ -10,10 +10,10 @@ import sys
 import threading
 import time
 
-from . import utils
+from . import shared
 
 
-class KochaTcpClient(utils.KochaTcpSocketWrapper):
+class KochaTcpClient(shared.KochaTcpSocketWrapper):
     """
     Klasse fuer die Kommunikation mit dem KOCHA-Server via TCP/IP.
     """
@@ -23,7 +23,7 @@ class KochaTcpClient(utils.KochaTcpSocketWrapper):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         # Timeout fuer den Client-Socket setzen
-        sock.settimeout(utils.KOCHA_TIMEOUT)
+        sock.settimeout(shared.KOCHA_TIMEOUT)
 
         # Der Alias
         self.alias = ""
@@ -50,7 +50,7 @@ class KochaTcpClient(utils.KochaTcpSocketWrapper):
         if not self.alias:
             return
 
-        message = utils.KochaMessage(content=content, sender=self.alias)
+        message = shared.KochaMessage(content=content, sender=self.alias)
         super().send(message)
 
     def close(self):
@@ -72,8 +72,8 @@ class KochaTcpClient(utils.KochaTcpSocketWrapper):
             return
 
         # Loginanfrage an den KOCHA-Server senden
-        request = utils.KochaMessage(content="/login " + alias)
-        data = utils.JsonUtils.to_json(request)
+        request = shared.KochaMessage(content="/login " + alias)
+        data = shared.JsonUtils.to_json(request)
         self.socket.sendall(data.encode())
 
         # Auf Antwort des KOCHA-Servers warten (maximal 5 Versuche)
@@ -139,7 +139,7 @@ class KochaUi:
         # Titel des Programms zeichnen (Hintergrund- und Vordergundfarbe
         # vertauscht)
         self.stdscr.addstr(
-            0, 0, "KOCHA " + utils.KOCHA_VERSION, curses.A_REVERSE)
+            0, 0, "KOCHA " + shared.KOCHA_VERSION, curses.A_REVERSE)
         self.stdscr.chgat(-1, curses.A_REVERSE)
         self.stdscr.refresh()
 
