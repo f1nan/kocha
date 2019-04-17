@@ -250,6 +250,10 @@ class KochaUi:
 
             # Ausfuehren wenn die Eingabe ein Zeilenende ist
             if c == ord("\n"):
+                # Zeilenende ohne sonstige Eingabe ignorieren
+                if self.input == "":
+                    continue
+
                 # Programm beenden, wenn Nutzer /q oder /quit eigegeben
                 # hat
                 if self.input.lower() in { "/q", "/quit" }:
@@ -311,6 +315,8 @@ class KochaUi:
             # Chat-Message voranstellen
             if message.sender == shared.KOCHA_SERVER_ALIAS:
                 line += "[SM]"
+            elif message.sender == self.kocha_tcp_client.alias:
+                line += "[ME]"
             elif message.is_dm:
                 line += "[DM]"
             else:
@@ -337,28 +343,33 @@ class KochaUi:
         for y, line in enumerate(lines[begin:], start=1):
             self.messages_window.addstr(y, 1, line)
 
+            # Den Beginn des eigentlichen Inhalts bestimmen (die
+            # Startposition ergibt sich aus der Laenge des Headers)
+            start_content = line.find(":", 15) + 1
+
             # Direktnachrichten und Servernachrichten hervorheben
             if line.startswith("[SM]"):
                 self.messages_window.chgat(
-                    y, 1, 4, curses.color_pair(KochaUiColorPair.SERVER))
+                    y,
+                    1,
+                    start_content,
+                    curses.color_pair(KochaUiColorPair.SERVER))
             elif line.startswith("[DM]"):
                 self.messages_window.chgat(
-                    y, 1, 4, curses.color_pair(KochaUiColorPair.DM))
-
+                    y,
+                    1,
+                    start_content,
+                    curses.color_pair(KochaUiColorPair.DM))
 
             # Liste fuer die X-Positionen des eigenen Alias anlegen
             alias_x_positions = []
-
-            # Den Beginn des eigentlichen Inhalts bestimmen (die
-            # Startposition ergibt sich aus der Laenge des Headers)
-            start = line.find(":", 15) + 1
 
             # Die X-Position des eigenen Aliases in einer Zeile
             # finden
             line_lower = line.lower()
             alias_lower = self.kocha_tcp_client.alias.lower()
             while True:
-                alias_x = line_lower.find(alias_lower, start)
+                alias_x = line_lower.find(alias_lower, start_content)
 
                 # Wenn der Alias nicht auftaucht, abbrechen
                 if alias_x == -1:
@@ -366,7 +377,7 @@ class KochaUi:
 
                 # X-Position des Alias zur Liste hinzufuegen
                 alias_x_positions.append(alias_x)
-                start = alias_x + len(alias_lower)
+                start_content = alias_x + len(alias_lower)
 
             # Den eigenen Alias im Nachrichtentext hervorheben
             for alias_x in alias_x_positions:
@@ -374,7 +385,7 @@ class KochaUi:
                     y,
                     1 + alias_x,
                     len(self.kocha_tcp_client.alias),
-                    curses.color_pair(KochaUiColorPair.DM))
+                    curses.color_pair(KochaUiColorPair.DM) | curses.A_BOLD)
 
     def draw_input_window(self):
         """
