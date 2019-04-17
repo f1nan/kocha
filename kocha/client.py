@@ -3,6 +3,7 @@ Modul mit Klassen und Methoden für den KOCHA-Client.
 """
 
 import curses
+import enum
 import locale
 import queue
 import socket
@@ -39,18 +40,17 @@ class KochaTcpClient(shared.KochaTcpSocketWrapper):
         # Den Client-Socket merken
         super().__init__(sock)
 
-    def send(self, content):
+    def send(self, message):
         """
         Eine Nachricht an den KOCHA-Server schicken.
 
         Args:
-            content: Der Inhalt der Nachricht.
+            message: Die Nachricht.
         """
         # Wenn nicht angemeldet, nix machen
         if not self.alias:
             return
 
-        message = shared.KochaMessage(content=content, sender=self.alias)
         super().send(message)
 
     def close(self):
@@ -66,32 +66,52 @@ class KochaTcpClient(shared.KochaTcpSocketWrapper):
 
         Args:
             alias: Der Alias fuer die Anmeldung.
+        Returns:
+            Die Antwort des KOCHA-Servers
         """
+        answer = None
+
         # Wenn nicht mit dem KOCHA-Server verbunden, nix machen
-        if not self.is_connected:
-            return
+        if self.is_connected:
 
-        # Loginanfrage an den KOCHA-Server senden
-        request = shared.KochaMessage(content="/login " + alias)
-        data = shared.JsonUtils.to_json(request)
-        self.socket.sendall(data.encode())
+            # Loginanfrage an den KOCHA-Server senden
+            request = shared.KochaMessage(content="/login " + alias)
+            data = shared.JsonUtils.to_json(request)
+            self.socket.sendall(data.encode())
 
-        # Auf Antwort des KOCHA-Servers warten (maximal 5 Versuche)
-        answer, count = None, 0
-        while answer is None and count < 5:
-            try:
-                answer = self.receive()
-            except socket.timeout:
-                pass
+            # Auf Antwort des KOCHA-Servers warten (maximal 5 Versuche)
+            count = 0
+            while answer is None and count < 5:
+                try:
+                    answer = self.receive()
+                except socket.timeout:
+                    pass
 
-            count += 1
+                count += 1
 
-        print(answer.content)
+            # Wenn die Anmeldung erfolgreich war den Alias setzen
+            if answer is not None:
+                if answer.content == "OK":
+                    self.alias = alias
 
-        # Wenn die Anmeldung erfolgreich war den Alias setzen
-        if answer is not None:
-            if answer.content == "OK":
-                self.alias = alias
+        return answer
+
+@enum.unique
+class KochaUiColorPair(enum.IntEnum):
+    """
+    Enumeration mit Bezeichnern fuer Farbpaare.
+    """
+
+    DM = 1
+    """
+    Bezeichner fuer das Farbpaar zur Hervorhebung des eigenen Namens
+    und direkter Nachrichten.
+    """
+
+    SERVER = 2
+    """
+    Bezeichner fuer das Farbpaar zur Hervorhebung von Servernachrichten.
+    """
 
 
 class KochaUi:
@@ -99,7 +119,12 @@ class KochaUi:
     Klasse fuer das User Interface des KOCHA-Clients.
     """
 
-    def __init__(self, stdscr=None, prompt="> "):
+    def __init__(
+        self,
+        kocha_tcp_client,
+        stdscr=None,
+        prompt="> ",
+        welcome_message=None):
         """
         Initialisert ein Object der Klasse KochaUi.
 
@@ -108,10 +133,25 @@ class KochaUi:
             repraesentiert.
             prompt: Das Zeichen fuer die Eingabeaufforderung.
         """
+        # Den kocha_tcp_client merken
+        self.kocha_tcp_client = kocha_tcp_client
+
+        # Das Zeichen fuer die Eingabeaufforderung merken
+        self.prompt = prompt
+
+        # Puffer für die Nachrichten initialisieren
+        self.messages = []
+
+        # Puffer fuer die Texteingabe initialisieren
+        self.input = ""
+
+        # Signal zum schließen des KOCHA-Clients
+        self.stop = False
+
         if stdscr is None:
             # Die curses Bibliothek initialisieren, falls kein
             # Hauptfenster uerbgeben wurde
-            stdscr = curses.initscr()
+            self.stdscr = curses.initscr()
 
             # Zeichen nicht automatisch auf dem Bildschirm ausgeben
             curses.noecho()
@@ -123,25 +163,43 @@ class KochaUi:
             # Sonderzeichen von curses abfangen lassen, damit sie
             # einfacher zu verarbeiten sind
             self.stdscr.keypad(True)
+        else:
+            # Das Haupfenster merken
+            self.stdscr = stdscr
 
-        # Das Haupfenster merken
-        self.stdscr = stdscr
+        # Farbschemata anlegen
+        self.has_colors = False
+        if (curses.has_colors()):
+            # Initialisiert 8 Grundfarben (schwarz, rot, grün, gelb,
+            # blau, magenta, cyan und weiß) und muss aufgerufen werden
+            # bevor andere Farbmanipulationen ausgefuehrt werden
+            curses.start_color()
 
-        # Das Zeichen fuer die Eingabeaufforderung merken
-        self.prompt = prompt
+            # Farbschema zur Hervorhebung des eigenen Namens und
+            # direkter Nachrichten anlegen
+            curses.init_pair(
+                KochaUiColorPair.DM,
+                curses.COLOR_RED,
+                curses.COLOR_BLACK)
 
-        # Puffer für die Nachrichten initialisieren
-        self.messages = []
+            # Farbschema zur Hervorhebung von Servernachrichten
+            curses.init_pair(
+                KochaUiColorPair.SERVER,
+                curses.COLOR_BLUE,
+                curses.COLOR_BLACK)
 
-        # Puffer fuer die Texteingabe initialisieren
-        self.input = ""
+            self.has_colors = True
+
+            # Die Wilkommensnachricht, darf nur angehaengt werden, wenn
+            # fest steht, dass das Terminal Farben unterstuetzt
+            if welcome_message is not None:
+                self.messages.append(welcome_message)
 
         # Titel des Programms zeichnen (Hintergrund- und Vordergundfarbe
         # vertauscht)
         self.stdscr.addstr(
             0, 0, "KOCHA " + shared.KOCHA_VERSION, curses.A_REVERSE)
         self.stdscr.chgat(-1, curses.A_REVERSE)
-        self.stdscr.refresh()
 
         # Das Nachrichtenfenster erstellen und zeichnen
         self.messages_window = curses.newwin(
@@ -153,12 +211,26 @@ class KochaUi:
             3, curses.COLS, curses.LINES - 3, 0)
         self.draw_input_window()
 
+        # Die Ansicht aktualisieren
+        self.refresh()
+
+        # Den Worker-Thread zum Empfangen von Nachrichten starten
+        self.receive_messages_worker = threading.Thread(
+            target=self.receive_messages, daemon=True)
+        self.receive_messages_worker.start()
+
     def close(self):
         """
         Wird beim Schließen des User Interfaces aufgerufen. Meldet den
         Client am Server ab und stellt den Ursprungszustand des
         Terminals wieder her.
         """
+        # Warten bis der Worker-Thread terminiert
+        self.receive_messages_worker.join()
+
+        # Den KochaTcpClient schließen
+        self.kocha_tcp_client.close()
+
         # Terminaleinstellungen für curses wieder aufheben
         curses.nocbreak()
         self.stdscr.keypad(False)
@@ -172,9 +244,7 @@ class KochaUi:
         Wartet auf Nutzereingaben und verarbeitet diese in einer
         Endlosschleife.
         """
-        threading.Thread(target=self.get_messages_from_server).start()
-
-        while True:
+        while not self.stop:
             # Auf Nutzereingabe warten
             c = self.input_window.getch()
 
@@ -182,26 +252,36 @@ class KochaUi:
             if c == ord("\n"):
                 # Programm beenden, wenn Nutzer /q oder /quit eigegeben
                 # hat
-                if self.input in { "/q", "/quit" }:
-                    break
+                if self.input.lower() in { "/q", "/quit" }:
+                    self.stop = True
 
-                # Nutzereingabe zum Nachrichtenpuffer hinzufuegen
-                self.messages.append(self.input)
+                # Ein Nachricht-Object erstellen
+                message = shared.KochaMessage(
+                    content=self.input,
+                    sender=self.kocha_tcp_client.alias)
+
+                # Nachricht zum Nachrichtenpuffer hinzufuegen
+                if not self.is_input_a_command():
+                    self.messages.append(message)
 
                 # Texteingabepuffer zuruecksetzen
                 self.input = ""
 
-                # Das Nachrichtenfenster aktualisieren
+                # Nachrichtenfenster und Eingebefenster neu zeichnen
                 self.draw_messages_window()
-
-                # Das Eingabefenster aktualiseren
                 self.draw_input_window()
+
+                # Nachrich an den KOCHA-Server uerbermitteln
+                self.kocha_tcp_client.send(message)
             else:
-                # Nutzereingabe zum Puffer Texteingabepuffer hinzufuegen
+                # Nutzereingabe zum Texteingabepuffer hinzufuegen
                 self.input += chr(c)
 
-                # Das Eingabefenster aktualisieren
+                # Das Eingabefenster neu zeichnen
                 self.draw_input_window()
+
+            # Ansicht aktualisieren
+            self.refresh()
 
         # KOCHA-Client am Server abmelden und UI schließen
         self.close()
@@ -216,10 +296,6 @@ class KochaUi:
         # Einen Rahmen um das Nachrichtenfenster zeichnen
         self.messages_window.box()
 
-        # Nachrichten zeichnen
-        for y, message in enumerate(self.messages, start=1):
-            self.messages_window.addstr(y, 1, message)
-
         # Abmessungen des Nachrichtenfensters holen
         max_y, max_x = self.messages_window.getmaxyx()
 
@@ -227,24 +303,78 @@ class KochaUi:
         max_y, max_x = max_y - 2, max_x - 2
 
         # Nachrichten an die Breite des Nachrichtenfensters anpassen
-        messages = []
+        lines = []
         for message in self.messages:
-            while message != "":
-                messages.append(message[:max_x])
-                message = message[max_x:]
+            line = ""
+
+            # Indikator fuer Direct-Message, Server-Message oder
+            # Chat-Message voranstellen
+            if message.sender == shared.KOCHA_SERVER_ALIAS:
+                line += "[SM]"
+            elif message.is_dm:
+                line += "[DM]"
+            else:
+                line += "[CM]"
+
+            # Sendezeit anhaengen
+            line += message.sent_at.strftime("[%H:%M:%S] ")
+
+            # Alias des Senders anhaengen
+            line += message.sender + ": "
+
+            # Eigentlichen Nachrichteninhalt anhaengen
+            line += message.content
+            while line != "":
+                lines.append(line[:max_x])
+                line = line[max_x:]
 
         # Index der aeltesten Nachricht, die im Nachrichtenfenster
         # gezeichnet werden kann, bestimmen
-        begin = len(self.messages) - max_y
+        begin = len(lines) - max_y
         begin = begin if begin >= 0 else 0
 
-        # Nachrichten ins Nachrichtenfesnter zeichnen
-        for y, message in enumerate(messages[begin:], start=1):
-            self.messages_window.addstr(y, 1, message)
+        # Nachrichten ins Nachrichtenfenster zeichnen
+        for y, line in enumerate(lines[begin:], start=1):
+            self.messages_window.addstr(y, 1, line)
 
-        # Das Nachrichtenfesnster aktualisieren
-        self.messages_window.refresh()
+            # Direktnachrichten und Servernachrichten hervorheben
+            if line.startswith("[SM]"):
+                self.messages_window.chgat(
+                    y, 1, 4, curses.color_pair(KochaUiColorPair.SERVER))
+            elif line.startswith("[DM]"):
+                self.messages_window.chgat(
+                    y, 1, 4, curses.color_pair(KochaUiColorPair.DM))
 
+
+            # Liste fuer die X-Positionen des eigenen Alias anlegen
+            alias_x_positions = []
+
+            # Den Beginn des eigentlichen Inhalts bestimmen (die
+            # Startposition ergibt sich aus der Laenge des Headers)
+            start = line.find(":", 15) + 1
+
+            # Die X-Position des eigenen Aliases in einer Zeile
+            # finden
+            line_lower = line.lower()
+            alias_lower = self.kocha_tcp_client.alias.lower()
+            while True:
+                alias_x = line_lower.find(alias_lower, start)
+
+                # Wenn der Alias nicht auftaucht, abbrechen
+                if alias_x == -1:
+                    break
+
+                # X-Position des Alias zur Liste hinzufuegen
+                alias_x_positions.append(alias_x)
+                start = alias_x + len(alias_lower)
+
+            # Den eigenen Alias im Nachrichtentext hervorheben
+            for alias_x in alias_x_positions:
+                self.messages_window.chgat(
+                    y,
+                    1 + alias_x,
+                    len(self.kocha_tcp_client.alias),
+                    curses.color_pair(KochaUiColorPair.DM))
 
     def draw_input_window(self):
         """
@@ -276,32 +406,103 @@ class KochaUi:
         # Cursorposition aktualisieren
         self.input_window.cursyncup()
 
-        # Eingabefenster aktualisieren
-        self.input_window.refresh()
+    def refresh(self):
+        """
+        Die Ansicht aktualisieren.
+        """
+        # Fenster von unterstem zum obersten Layer aktualisieren, damit
+        # keine Inhalte verdeckt oder ueberschrieben werden
+        self.stdscr.noutrefresh()
+        self.messages_window.noutrefresh()
+        self.input_window.noutrefresh()
 
-    def get_messages_from_server(self):
-        for _ in range(10):
-            time.sleep(5.0)
-            self.messages.append("Insert random chuck norris joke here")
-            self.draw_messages_window()
-            self.draw_input_window()
+        curses.doupdate()
+
+    def receive_messages(self):
+        """
+        Nachrichten vom KOCHA-Server empfangen und ins
+        Nachrichtenfenster zeichnen.
+        """
+        while not self.stop:
+            try:
+                message = self.kocha_tcp_client.receive()
+
+                self.messages.append(message)
+                self.draw_messages_window()
+                self.refresh()
+            except socket.timeout:
+                pass
+
+    def is_input_a_command(self):
+        """
+        Prueft ob die Benutzereingabe ein Kommando ist.
+
+        Returns:
+            True, wenn die Benutzereingabe ein Kommando ist, sonst
+            False.
+        """
+        if (self.input == "/h"
+                or self.input == "/help"
+                or self.input == "/q"
+                or self.input == "/quit"
+                or self.input == "/dm"
+                or self.input == "/l"
+                or self.input == "/list"):
+            return True
+        else:
+            return False
 
     @staticmethod
-    def show(stdscr):
+    def show():
         """
         Wird aufgerufen um das User Interface für den KOCHA-Client
         aufzurufen.
-
-        Args:
-            stdscr: Window-Object, das den gesamten Bilschirm
-            repraesentiert.
         """
-        ui = KochaUi(stdscr)
+        # Das Gebietsschema auf die Standardeinstellung des Benutzers
+        # setzen
+        locale.setlocale(locale.LC_ALL, "")
+
+        # Eine Instanz des KochaTcpClients erstellen und mit dem Server
+        # verbinden
+        kocha_tcp_client = KochaTcpClient("", 9090)
+        if not kocha_tcp_client.is_connected:
+            print("Couldn't connect with KOCHA-Server. Did you provide the"
+                 "correct host and port? Is the KOCHA-Server running?")
+            return 0
+
+        # Mit dem Client am KOCHA-Server anmelden
+        welcome_message = None
+        while not kocha_tcp_client.alias:
+            # Alias vom Benutzer holen
+            alias = input("Enter alias: ")
+
+            # Versuchen sich mit dem Alias anzumelden
+            welcome_message = kocha_tcp_client.try_login(alias)
+
+            # Bei gescheiterter Anmeldung, Nutzer fragen, ob er es mit
+            # einem anderen Alias nochmal probieren moechte
+            if not kocha_tcp_client.alias:
+                print("The login failed. Your alias might be taken by another "
+                      "user or your alias contains illegal characters like ':' "
+                      "or any form of whitespace.")
+
+                try_again = input("Try again with a different alias? [y/n] ")
+                if try_again.lower() != "y":
+                    return 0
+
+        # Das User-Interface des KOCHA-Clients erstellen
+        ui = KochaUi(kocha_tcp_client, welcome_message=welcome_message)
+
+        # Wenn das Terminal keine Farben unterstuezt, hier abbrechen
+        if not ui.has_colors:
+            ui.close()
+            print("Terminal has to support colors in order to run"
+                  "KOCHA-Client")
+            return
+
+        # Auf Benutzereingaben warten und Nachrichten anzeigen
         ui.loop()
 
 
 if __name__ == "__main__":
-    # Das Gebietsschema auf die Standardeinstellung des Benutzers setzen
-    locale.setlocale(locale.LC_ALL, "")
-
-    #curses.wrapper(KochaUi.show)
+    sys.exit(KochaUi.show())

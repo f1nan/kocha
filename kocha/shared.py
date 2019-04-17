@@ -23,6 +23,11 @@ KOCHA_TIMEOUT = 2.0
 Timeout fuer Socket-Objects.
 """
 
+KOCHA_SERVER_ALIAS = "KOCHA-Server"
+"""
+Der Alias des KOCHA-Servers.
+"""
+
 class KochaMessage:
     """
     Klasse kapselt ein Nachrichten-Object, dass im JSON-Format über

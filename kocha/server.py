@@ -36,11 +36,6 @@ class KochaTcpServer(shared.KochaTcpSocketWrapper):
     um mehrere Clients gleichzeitig bedienen zu koennen.
     """
 
-    ALIAS = "KOCHA-Server"
-    """
-    Der Alias des KOCHA-Servers.
-    """
-
     def __init__(self, host="", port=9090):
         """
         Initialisiert ein Object der Klasse KochaTcpServer.
@@ -159,17 +154,18 @@ class KochaTcpServer(shared.KochaTcpSocketWrapper):
             client: Die Daten der Clientverbindung.
             content: Der Inhalt der Nachricht.
         """
-        print(content)
         command, alias, *_ = content.split()
         content = ""
         if command == "/login":
-            if alias not in self.clients.values():
+            if (not set(": ").issubset(alias)
+                    and alias not in self.clients.values()
+                    and alias != shared.KOCHA_SERVER_ALIAS):
                 self.clients[client] = alias
                 content = "OK"
 
         response = shared.KochaMessage(
             content=content,
-            sender=self.ALIAS,
+            sender=shared.KOCHA_SERVER_ALIAS,
             is_dm=True)
         client.send(response)
 
@@ -201,7 +197,7 @@ class KochaTcpServer(shared.KochaTcpSocketWrapper):
         """
         response = shared.KochaMessage(
             content=", ".join(self.clients.values()),
-            sender=self.ALIAS,
+            sender=shared.KOCHA_SERVER_ALIAS,
             is_dm=True)
         client.send(response)
 
