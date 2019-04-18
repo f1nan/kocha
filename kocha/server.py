@@ -155,12 +155,7 @@ class KochaTcpServer(shared.KochaTcpSocketWrapper):
             elif (request.content.startswith("/dm ")):
                 # Einem anderen Client eine direkte Nachricht
                 # weiterleiten
-                try:
-                    self.on_dm(client, request)
-                except ValueError:
-                    # TODO: Dem Client die Hilfe für das /dm- Kommando
-                    # schicken
-                    pass
+                self.on_dm(client, request)
             else:
                 # Die Nachricht im Chat veröffentlichen
                 self.on_broadcast(client, request)
@@ -241,7 +236,23 @@ class KochaTcpServer(shared.KochaTcpSocketWrapper):
             client: Die Daten der Clientverbindung.
             message: Das KochaMessage-Object.
         """
-        # TODO: Methode on_dm implementieren
+        addressed_alias, content = "", ""
+        try:
+            _, addressed_alias, content = message.content.split()
+        except ValueError:
+            return
+
+        # Wenn Sender auch Empfaenger ist, nix machen
+        if message.sender == addressed_alias:
+            return
+
+        for cli in self.clients:
+            alias = self.clients[cli]
+            if alias == addressed_alias:
+                message.is_dm = True
+                cli.send(message)
+
+                return
 
     def on_quit(self, client):
         """
