@@ -338,9 +338,15 @@ class KochaUi:
 
             # Eigentlichen Nachrichteninhalt anhaengen
             line += message.content
-            while line != "":
-                lines.append(line[:max_x])
-                line = line[max_x:]
+
+            # Newlines in Zeile verarbeiten
+            parts = line.split("\n")
+
+            # Zeilen an die Breite des User Interfaces anpassen
+            for part in parts:
+                while part != "":
+                    lines.append(part[:max_x])
+                    part = part[max_x:]
 
         # Index der aeltesten Nachricht, die im Nachrichtenfenster
         # gezeichnet werden kann, bestimmen
@@ -398,7 +404,7 @@ class KochaUi:
                     y,
                     1 + alias_x,
                     len(self.kocha_tcp_client.alias),
-                    curses.color_pair(KochaUiColorPair.DM) | curses.A_BOLD)
+                    curses.color_pair(KochaUiColorPair.DM))
 
     def draw_input_window(self):
         """
@@ -498,7 +504,7 @@ class KochaUi:
 
         # Eine Instanz des KochaTcpClients erstellen und mit dem Server
         # verbinden
-        kocha_tcp_client = KochaTcpClient("", 9090)
+        kocha_tcp_client = KochaTcpClient("", 9999)
         if not kocha_tcp_client.is_connected:
             print("Couldn't connect with KOCHA-Server. Did you provide the"
                  "correct host and port? Is the KOCHA-Server running?")

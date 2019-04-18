@@ -37,13 +37,24 @@ class KochaTcpServer(shared.KochaTcpSocketWrapper):
     """
 
     KOCHA_WELCOME_MESSAGE = (
-        "Hello {}! Welcome to the KOCHA-Chat. Type /h or /help to dispaly a "
+        "Hello {}! Welcome to the KOCHA chat. Type /h or /help to dispaly a "
         "list of available commands.")
     """
     Die Willkommensnachricht des KOCHA-Servers.
     """
 
-    def __init__(self, host="", port=9090):
+    KOCHA_HELP_CONTENT = (
+        "List of available commands:\n"
+        "/h or /help          -- Show this list\n"
+        "/q or /quit          -- Exit the KOCHA chat\n"
+        "/m or /members       -- Show a list of all registered users\n"
+        "/dm <user> <message> -- Write a direct message")
+    """
+    Liste aller verfuegbaren Kommandos, die beim Aufruf der Hilfe
+    gezeigt wird.
+    """
+
+    def __init__(self, host="", port=9999):
         """
         Initialisiert ein Object der Klasse KochaTcpServer.
 
@@ -96,7 +107,8 @@ class KochaTcpServer(shared.KochaTcpSocketWrapper):
             print("Connection from", client.address)
 
             # Die Anfragen des Clients in einem eigen Thread bearbeiten
-            handler = threading.Thread(target=self.handle, args=(client,))
+            handler = threading.Thread(
+                target=self.handle, args=(client,), daemon=True)
             self.handlers.append(handler)
             handler.start()
 
@@ -136,10 +148,10 @@ class KochaTcpServer(shared.KochaTcpSocketWrapper):
                 # TODO: Den Client vom Server abmelden
                 self.on_quit(client)
                 break
-            elif (request.content == "/l" or request.content == "/list"):
+            elif (request.content == "/m" or request.content == "/members"):
                 # TODO: Dem Client eine Liste mit allen angemeldeten
                 # Clients geben
-                self.on_list(client)
+                self.on_members(client)
             elif (request.content.startswith("/dm ")):
                 # Einem anderen Client eine direkte Nachricht
                 # weiterleiten
@@ -194,7 +206,7 @@ class KochaTcpServer(shared.KochaTcpSocketWrapper):
         self.socket.shutdown(socket.SHUT_RDWR)
         super().close()
 
-    def on_list(self, client):
+    def on_members(self, client):
         """
         Dem anfragenden Client eine durch Kommata getrennte Liste aller
         am KOCHA-Server angemeldeten Clients liefern.
@@ -244,14 +256,16 @@ class KochaTcpServer(shared.KochaTcpSocketWrapper):
         """
         Dem anfragenden Client eine Ueberischt aller Befehle schicken.
         """
-        # TODO: Methode on_help implementieren
+        response = shared.KochaMessage(
+            content=self.KOCHA_HELP_CONTENT, sender=shared.KOCHA_SERVER_ALIAS)
+        client.send(response)
 
 
 if __name__ == "__main__":
     # Das Gebietsschema auf die Standardeinstellung des Benutzers setzen
     locale.setlocale(locale.LC_ALL, "")
 
-    # Den KochaTcpServer auf Port 36037 starten
+    # Den KochaTcpServer auf Port 9090 starten
     try:
         server = KochaTcpServer()
         server.loop()
