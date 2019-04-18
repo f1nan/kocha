@@ -189,7 +189,7 @@ class KochaTcpServer(shared.KochaTcpSocketWrapper):
         # Nutzer sich erfolgreich am Chat angemeldet hat
         if content != "":
             message = shared.KochaMessage(
-                content="{ } joined the chat.".format(alias),
+                content="{} joined the chat.".format(alias),
                 sender=shared.KOCHA_SERVER_ALIAS)
             self.on_broadcast(client, message)
 
@@ -276,7 +276,7 @@ class KochaTcpServer(shared.KochaTcpSocketWrapper):
         # Andere Nutzer informieren, dass dieser Nutzer den Chat
         # verlassen hat
         message = shared.KochaMessage(
-            content="{ } left the chat.".format(self.clients[client]),
+            content="{} left the chat.".format(self.clients[client]),
             sender=shared.KOCHA_SERVER_ALIAS)
         self.on_broadcast(client, message)
 
