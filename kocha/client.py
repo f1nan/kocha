@@ -245,44 +245,45 @@ class KochaUi:
         Endlosschleife.
         """
         while not self.stop:
-            # Auf Nutzereingabe warten
+            # Auf Nutzereingabe warten und diese verarbeiten
             c = self.input_window.getch()
 
-            # Ausfuehren wenn die Eingabe ein Zeilenende ist
             if c == ord("\n"):
                 # Zeilenende ohne sonstige Eingabe ignorieren
                 if self.input == "":
                     continue
 
-                # Programm beenden, wenn Nutzer /q oder /quit eigegeben
-                # hat
+                # Bei /q oder /quit Programm beenden
                 if self.input.lower() in { "/q", "/quit" }:
                     self.stop = True
 
-                # Ein Nachricht-Object erstellen
+                # Ein Message-Object erstellen
                 message = shared.KochaMessage(
                     content=self.input,
                     sender=self.kocha_tcp_client.alias)
 
                 # Nachricht zum Nachrichtenpuffer hinzufuegen
-                if not self.is_input_a_command():
-                    self.messages.append(message)
+                self.messages.append(message)
 
-                # Texteingabepuffer zuruecksetzen
+                # Eingabepuffer zuruecksetzen
                 self.input = ""
 
-                # Nachrichtenfenster und Eingebefenster neu zeichnen
+                # Nachrichtenfenster neu zeichnen
                 self.draw_messages_window()
-                self.draw_input_window()
 
-                # Nachrich an den KOCHA-Server uerbermitteln
+                # Message an den KOCHA-Server uerbermitteln
                 self.kocha_tcp_client.send(message)
-            else:
-                # Nutzereingabe zum Texteingabepuffer hinzufuegen
+
+            elif c == curses.KEY_BACKSPACE or c == 127:
+                # Bei Ruecktaste zuvor eingegebenes Zeichen entfernen
+                self.input = self.input[:-1]
+
+            elif 31 < c and c <= 126:
+                # Druckbare ASCII-Zeichen anhaengen
                 self.input += chr(c)
 
-                # Das Eingabefenster neu zeichnen
-                self.draw_input_window()
+            # Eingabefenster neu zeichnen
+            self.draw_input_window()
 
             # Ansicht aktualisieren
             self.refresh()
@@ -448,25 +449,6 @@ class KochaUi:
                 self.refresh()
             except socket.timeout:
                 pass
-
-    def is_input_a_command(self):
-        """
-        Prueft ob die Benutzereingabe ein Kommando ist.
-
-        Returns:
-            True, wenn die Benutzereingabe ein Kommando ist, sonst
-            False.
-        """
-        if (self.input == "/h"
-                or self.input == "/help"
-                or self.input == "/q"
-                or self.input == "/quit"
-                or self.input == "/dm"
-                or self.input == "/l"
-                or self.input == "/list"):
-            return True
-        else:
-            return False
 
     @staticmethod
     def show():
