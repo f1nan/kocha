@@ -339,8 +339,8 @@ class KochaUi:
         begin = len(lines) - max_y
         begin = begin if begin >= 0 else 0
 
-        # Nachrichten ins Nachrichtenfenster zeichnen
         for y, line in enumerate(lines[begin:], start=1):
+            # Nachricht ins Nachrichtenfenster zeichnen
             self.messages_window.addstr(y, 1, line)
 
             # Den Beginn des eigentlichen Inhalts bestimmen (die
@@ -360,6 +360,11 @@ class KochaUi:
                     1,
                     start_content,
                     curses.color_pair(KochaUiColorPair.DM))
+
+            # Keine Hervorhebung fuer Nachrichten, die man selbst
+            # geschrieben hat
+            if line.startswith("[ME]"):
+                continue
 
             # Liste fuer die X-Positionen des eigenen Alias anlegen
             alias_x_positions = []
