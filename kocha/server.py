@@ -215,11 +215,10 @@ class KochaTcpServer(shared.KochaTcpSocketWrapper):
             client: Die Daten der Clientverbindung.
         """
         content = ", ".join(
-            self.clients[c] for c in self.clients if c != client)
+            self.clients[cli] for cli in self.clients if cli != client)
         response = shared.KochaMessage(
             content=content,
-            sender=shared.KOCHA_SERVER_ALIAS,
-            is_dm=True)
+            sender=shared.KOCHA_SERVER_ALIAS)
         client.send(response)
 
     def on_broadcast(self, client, message):
@@ -230,7 +229,9 @@ class KochaTcpServer(shared.KochaTcpSocketWrapper):
             client: Die Daten der Clientverbindung
             message: Das KochaMessage-Object.
         """
-        # TODO: Methode on_broadcast implementieren
+        for cli in self.clients:
+            if cli != client:
+                cli.send(message)
 
     def on_dm(self, client, message):
         """
