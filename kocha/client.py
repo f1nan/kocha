@@ -501,13 +501,22 @@ class KochaUi:
         # setzen
         locale.setlocale(locale.LC_ALL, "")
 
+        # Kommandozeilenparameter verarbeiten
+        if (len(sys.argv) != 3):
+            print("Usage: python3 -m kocha.client SERVER_HOST SERVER_PORT")
+            return 1
+
+        server_host = sys.argv[1]
+        server_port = int(sys.argv[2])
+
         # Eine Instanz des KochaTcpClients erstellen und mit dem Server
         # verbinden
-        kocha_tcp_client = KochaTcpClient("", 9999)
+        kocha_tcp_client = KochaTcpClient(
+            server_host=server_host, server_port=server_port)
         if not kocha_tcp_client.is_connected:
             print("Couldn't connect with KOCHA-Server. Did you provide the"
                  "correct host and port? Is the KOCHA-Server running?")
-            return 0
+            return 1
 
         # Mit dem Client am KOCHA-Server anmelden
         welcome_message = None
@@ -527,7 +536,7 @@ class KochaUi:
 
                 try_again = input("Try again with a different alias? [y/n] ")
                 if try_again.lower() != "y":
-                    return 0
+                    return 1
 
         # Das User-Interface des KOCHA-Clients erstellen
         ui = KochaUi(kocha_tcp_client, welcome_message=welcome_message)
@@ -537,7 +546,7 @@ class KochaUi:
             ui.close()
             print("Terminal has to support colors in order to run"
                   "KOCHA-Client")
-            return
+            return 1
 
         # Auf Benutzereingaben warten und Nachrichten anzeigen
         ui.loop()

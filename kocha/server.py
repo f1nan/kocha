@@ -5,6 +5,7 @@ Modul mit Klassen und Methoden für den KOCHA-Server.
 import json
 import locale
 import socket
+import sys
 import threading
 
 from . import shared
@@ -291,14 +292,29 @@ class KochaTcpServer(shared.KochaTcpSocketWrapper):
             content=self.KOCHA_HELP_CONTENT, sender=shared.KOCHA_SERVER_ALIAS)
         client.send(response)
 
+    @staticmethod
+    def start():
+        """
+        Startet den KOCHA-Server.
+        """
+        # Das Gebietsschema auf die Standardeinstellung des Benutzers setzen
+        locale.setlocale(locale.LC_ALL, "")
+
+        # Kommandozeilenparameter verarbeiten
+        if (len(sys.argv) != 3):
+            print("Usage: python3 -m kocha.server HOST PORT")
+            return 1
+
+        host = sys.argv[1]
+        port = int(sys.argv[2])
+
+        # Den KOCHA-Server starten
+        try:
+            server = KochaTcpServer(host=host, port=port)
+            server.loop()
+        except KeyboardInterrupt:
+            server.close()
+
 
 if __name__ == "__main__":
-    # Das Gebietsschema auf die Standardeinstellung des Benutzers setzen
-    locale.setlocale(locale.LC_ALL, "")
-
-    # Den KochaTcpServer auf Port 9090 starten
-    try:
-        server = KochaTcpServer()
-        server.loop()
-    except KeyboardInterrupt:
-        server.close()
+    sys.exit(KochaTcpServer.start())
