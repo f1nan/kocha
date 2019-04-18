@@ -21,15 +21,16 @@
             - [x] Die Rücktaste muss wie erwartet funktionieren
             - [x] Nur ASCII-Zeichen als Eingabe erlauben um Probleme mit falschem Encoding durch curses zu umgehen
 
-- [ ] Es muss ein Server-Programm geben
+- [x] Es muss ein Server-Programm geben
     - [x] Clients müssen sich mit einem Alias am Server anmelden können
         - [x] Wenn ein Alias bereits verwendet wird, darf die Anmeldung nicht funktionieren
-    - [ ] Server muss oeffentliche Nachrichten im Chat an alle Clients broadcasten koennen
-    - [ ] Server muss persoenliche Nachrichten nur an den adressierten Empfaenger weiterleiten koennen
-    - [ ] Server muss eine Liste der verfuegbaren Kommandos zurueck geben koennen
-    - [ ] Server muss eine Liste der angemeldeten Clients zurueck geben koennen
+    - [x] Server muss oeffentliche Nachrichten im Chat an alle Clients broadcasten koennen
+    - [x] Server muss persoenliche Nachrichten nur an den adressierten Empfaenger weiterleiten koennen
+    - [x] Server muss eine Liste der verfuegbaren Kommandos zurueck geben koennen
+    - [x] Server muss eine Liste der angemeldeten Clients zurueck geben koennen
     - [x] Server muss mehrere Clients gleichzeitig bedienen können
     - [x] Server muss beim "shutdown" alle Clien-Threads terminieren
+    - [x] Server muss andere Nutzer informieren, wenn ein neuer Nutzer den Chat betritt oder verlaesst
 
 - [ ] Installation
     - [ ] Installation des Servers
