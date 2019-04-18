@@ -214,8 +214,10 @@ class KochaTcpServer(shared.KochaTcpSocketWrapper):
         Args:
             client: Die Daten der Clientverbindung.
         """
+        content = ", ".join(
+            self.clients[c] for c in self.clients if c != client)
         response = shared.KochaMessage(
-            content=", ".join(self.clients.values()),
+            content=content,
             sender=shared.KOCHA_SERVER_ALIAS,
             is_dm=True)
         client.send(response)
