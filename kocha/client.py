@@ -197,9 +197,7 @@ class KochaUi:
 
         # Titel des Programms zeichnen (Hintergrund- und Vordergundfarbe
         # vertauscht)
-        self.stdscr.addstr(
-            0, 0, "KOCHA " + shared.KOCHA_VERSION, curses.A_REVERSE)
-        self.stdscr.chgat(-1, curses.A_REVERSE)
+        self.draw_title()
 
         # Das Nachrichtenfenster erstellen und zeichnen
         self.messages_window = curses.newwin(
@@ -268,8 +266,9 @@ class KochaUi:
                 # Eingabepuffer zuruecksetzen
                 self.input = ""
 
-                # Nachrichtenfenster neu zeichnen
+                # Nachrichtenfenster und Eingabefenster neu zeichnen
                 self.draw_messages_window()
+                self.draw_input_window()
 
                 # Message an den KOCHA-Server uerbermitteln
                 self.kocha_tcp_client.send(message)
@@ -278,12 +277,20 @@ class KochaUi:
                 # Bei Ruecktaste zuvor eingegebenes Zeichen entfernen
                 self.input = self.input[:-1]
 
+                # Eingabefenster neu zeichnen
+                self.draw_input_window()
+
+            elif c == curses.KEY_RESIZE:
+                # Groesse des Interface an die neue Groesse des
+                # Terminals anpassen
+                self.resize()
+
             elif 31 < c and c <= 126:
                 # Druckbare ASCII-Zeichen anhaengen
                 self.input += chr(c)
 
-            # Eingabefenster neu zeichnen
-            self.draw_input_window()
+                # Eingabefenster neu zeichnen
+                self.draw_input_window()
 
             # Ansicht aktualisieren
             self.refresh()
@@ -449,6 +456,35 @@ class KochaUi:
                 self.refresh()
             except socket.timeout:
                 pass
+
+    def draw_title(self):
+        """
+        Den Titel zeichnen.
+        """
+        self.stdscr.clear()
+        self.stdscr.addstr(
+            0, 0, " KOCHA-Client " + shared.KOCHA_VERSION, curses.A_REVERSE)
+        self.stdscr.chgat(-1, curses.A_REVERSE)
+
+    def resize(self):
+        """
+        Die Größe des Kocha-Clients anpassen.
+        """
+        # Titel neu zeichnen
+        self.draw_title()
+
+        # Neue Abmessungen bestimmen
+        max_y, max_x = self.stdscr.getmaxyx()
+
+        # Die Groesse des Nachrichtenfensters anpassen und neu zeichnen
+        self.messages_window.resize(max_y - 4, max_x)
+        self.draw_messages_window()
+
+        # Postion und Größe des Eingabefensters anpassen und
+        # Eingabefenster neu zeichnen
+        self.input_window.mvwin(max_y - 3, 0)
+        self.input_window.resize(3, max_x)
+        self.draw_input_window()
 
     @staticmethod
     def show():
