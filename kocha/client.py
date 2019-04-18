@@ -91,7 +91,7 @@ class KochaTcpClient(shared.KochaTcpSocketWrapper):
 
             # Wenn die Anmeldung erfolgreich war den Alias setzen
             if answer is not None:
-                if answer.content == "OK":
+                if answer.content != "":
                     self.alias = alias
 
         return answer

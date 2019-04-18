@@ -36,6 +36,13 @@ class KochaTcpServer(shared.KochaTcpSocketWrapper):
     um mehrere Clients gleichzeitig bedienen zu koennen.
     """
 
+    KOCHA_WELCOME_MESSAGE = (
+        "Hello {}! Welcome to the KOCHA-Chat. Type /h or /help to dispaly a "
+        "list of available commands.")
+    """
+    Die Willkommensnachricht des KOCHA-Servers.
+    """
+
     def __init__(self, host="", port=9090):
         """
         Initialisiert ein Object der Klasse KochaTcpServer.
@@ -161,7 +168,7 @@ class KochaTcpServer(shared.KochaTcpSocketWrapper):
                     and alias not in self.clients.values()
                     and alias != shared.KOCHA_SERVER_ALIAS):
                 self.clients[client] = alias
-                content = "OK"
+                content = self.KOCHA_WELCOME_MESSAGE.format(alias)
 
         response = shared.KochaMessage(
             content=content,
