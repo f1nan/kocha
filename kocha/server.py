@@ -177,11 +177,21 @@ class KochaTcpServer(shared.KochaTcpSocketWrapper):
                 self.clients[client] = alias
                 content = self.KOCHA_WELCOME_MESSAGE.format(alias)
 
+        # Neuem Nutzer eine Nachricht senden (Willkommensnachricht bei
+        # erfolgreicher Anmeldung, sonst einen leeren String)
         response = shared.KochaMessage(
             content=content,
             sender=shared.KOCHA_SERVER_ALIAS,
             is_dm=True)
         client.send(response)
+
+        # Die anderen Clients darueber informieren, dass ein neuer
+        # Nutzer sich erfolgreich am Chat angemeldet hat
+        if content != "":
+            message = shared.KochaMessage(
+                content="{ } joined the chat.".format(alias),
+                sender=shared.KOCHA_SERVER_ALIAS)
+            self.on_broadcast(client, message)
 
     def close(self):
         """
@@ -209,10 +219,8 @@ class KochaTcpServer(shared.KochaTcpSocketWrapper):
         Args:
             client: Die Daten der Clientverbindung.
         """
-        content = ", ".join(
-            self.clients[cli] for cli in self.clients if cli != client)
         response = shared.KochaMessage(
-            content=content,
+            content=", ".join(self.clients.values()),
             sender=shared.KOCHA_SERVER_ALIAS)
         client.send(response)
 
@@ -236,9 +244,10 @@ class KochaTcpServer(shared.KochaTcpSocketWrapper):
             client: Die Daten der Clientverbindung.
             message: Das KochaMessage-Object.
         """
-        addressed_alias, content = "", ""
+        addressed_alias, content = None, None
         try:
-            _, addressed_alias, content = message.content.split()
+            _, addressed_alias, *content = message.content.split()
+            content = " ".join(content)
         except ValueError:
             return
 
@@ -263,6 +272,13 @@ class KochaTcpServer(shared.KochaTcpSocketWrapper):
         client.close()
 
         print("Closed connection of {!r}".format(client.address))
+
+        # Andere Nutzer informieren, dass dieser Nutzer den Chat
+        # verlassen hat
+        message = shared.KochaMessage(
+            content="{ } left the chat.".format(self.clients[client]),
+            sender=shared.KOCHA_SERVER_ALIAS)
+        self.on_broadcast(client, message)
 
         # Den Client aus der Liste der angemeldenten Clients entfernen
         del self.clients[client]
