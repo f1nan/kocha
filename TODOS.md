@@ -35,9 +35,9 @@
 - [ ] Installation
     - [ ] Installation des Servers
         - [ ] Server muss beim Starten des Computers mitgestartet werden (cron?)
-        - [ ] Port des Servers muss konfigurierbar sein
-    - [ ] Installation des Clients
-        - [ ] IP-Adresse und Port des Servers müssen einstellbar sein
+        - [x] Port des Servers muss konfigurierbar sein
+    - [x] Installation des Clients
+        - [x] IP-Adresse und Port des Servers müssen einstellbar sein
 
 - [ ] Allgemeine Aufgaben
     - [ ] README ueberarbeiten
