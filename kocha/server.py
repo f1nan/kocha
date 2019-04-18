@@ -249,9 +249,10 @@ class KochaTcpServer(shared.KochaTcpSocketWrapper):
         for cli in self.clients:
             alias = self.clients[cli]
             if alias == addressed_alias:
+                message.content = content
                 message.is_dm = True
-                cli.send(message)
 
+                cli.send(message)
                 return
 
     def on_quit(self, client):
