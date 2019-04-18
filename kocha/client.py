@@ -159,10 +159,6 @@ class KochaUi:
             # Bei jeder Eingabe reagieren und nicht nur wenn Enter
             # gedrueckt wird
             curses.cbreak()
-
-            # Sonderzeichen von curses abfangen lassen, damit sie
-            # einfacher zu verarbeiten sind
-            self.stdscr.keypad(True)
         else:
             # Das Haupfenster merken
             self.stdscr = stdscr
@@ -209,6 +205,9 @@ class KochaUi:
             3, curses.COLS, curses.LINES - 3, 0)
         self.draw_input_window()
 
+        # Sonderzeichen wie Pfeiltasten von curses abfangen lassen
+        self.input_window.keypad(True)
+
         # Die Ansicht aktualisieren
         self.refresh()
 
@@ -231,7 +230,7 @@ class KochaUi:
 
         # Terminaleinstellungen für curses wieder aufheben
         curses.nocbreak()
-        self.stdscr.keypad(False)
+        self.input_window.keypad(False)
         curses.echo()
 
         # Terminal in urspruenglichen Beriebsmodus zuruecksetzen
