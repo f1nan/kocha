@@ -21,5 +21,9 @@ if [[ $? == 1 ]]; then
     sudo crontab -l 2>/dev/null; echo "@reboot $CMD" | sudo crontab -
 fi
 
+# Um den cron-job wieder zu entfernen, nachstehenden auskommentierten
+# Befehl ausfuehren
+#sudo crontab -l 2>/dev/null | grep -v "@reboot $CMD" | sudo crontab -
+
 # KOCHA-Server jetzt starten
 $CMD 2>/dev/null &
