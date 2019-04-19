@@ -1,5 +1,5 @@
 """
-Modul mit Klassen und Methoden für den KOCHA-Server.
+Modul mit Klassen und Methoden fuer den KOCHA-Server.
 """
 
 import json
@@ -77,7 +77,7 @@ class KochaTcpServer(shared.KochaTcpSocketWrapper):
         # Signal zum Herunterfahren des KochaTcpServers
         self.stop = False
 
-        # Einen TCP-Socket für den KOCHA-Server erstellen
+        # Einen TCP-Socket fuer den KOCHA-Server erstellen
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         # Den erstellten Socket an die uebergene IP-Adresse und den
@@ -158,7 +158,7 @@ class KochaTcpServer(shared.KochaTcpSocketWrapper):
                 # weiterleiten
                 self.on_dm(client, request)
             else:
-                # Die Nachricht im Chat veröffentlichen
+                # Die Nachricht im Chat veroeffentlichen
                 self.on_broadcast(client, request)
 
     def try_login(self, client, content):

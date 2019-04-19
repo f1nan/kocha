@@ -31,7 +31,7 @@ Der Alias des KOCHA-Servers.
 
 class KochaMessage:
     """
-    Klasse kapselt ein Nachrichten-Object, dass im JSON-Format über
+    Klasse kapselt ein Nachrichten-Object, dass im JSON-Format ueber
     TCP/IP zwischen KOCHA-Server und KOCHA-Client ausgetauscht wird.
     """
 
@@ -89,7 +89,7 @@ class KochaMessageDecoder(json.JSONDecoder):
     def __init__(self, *args, **kwargs):
         """
         Eine Instanz der Klasse KochaMessageDecoder erstellen. Dabei
-        die Object-Hook für die Deserialisierung von
+        die Object-Hook fuer die Deserialisierung von
         KochaMessage-Objects initialisieren.
 
         Args:

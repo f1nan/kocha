@@ -1,5 +1,5 @@
 """
-Modul mit Klassen und Methoden für den KOCHA-Client.
+Modul mit Klassen und Methoden fuer den KOCHA-Client.
 """
 
 import curses
@@ -20,7 +20,7 @@ class KochaTcpClient(shared.KochaTcpSocketWrapper):
     """
 
     def __init__(self, server_host, server_port):
-        # Einen TCP-Socket für den KOCHA-Client erstellen
+        # Einen TCP-Socket fuer den KOCHA-Client erstellen
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         # Timeout fuer den Client-Socket setzen
@@ -139,7 +139,7 @@ class KochaUi:
         # Das Zeichen fuer die Eingabeaufforderung merken
         self.prompt = prompt
 
-        # Puffer für die Nachrichten initialisieren
+        # Puffer fuer die Nachrichten initialisieren
         self.messages = []
 
         # Puffer fuer die Texteingabe initialisieren
@@ -166,7 +166,7 @@ class KochaUi:
         # Farbschemata anlegen
         self.has_colors = False
         if (curses.has_colors()):
-            # Initialisiert 8 Grundfarben (schwarz, rot, grün, gelb,
+            # Initialisiert 8 Grundfarben (schwarz, rot, gruen, gelb,
             # blau, magenta, cyan und weiß) und muss aufgerufen werden
             # bevor andere Farbmanipulationen ausgefuehrt werden
             curses.start_color()
@@ -228,7 +228,7 @@ class KochaUi:
         # Den KochaTcpClient schließen
         self.kocha_tcp_client.close()
 
-        # Terminaleinstellungen für curses wieder aufheben
+        # Terminaleinstellungen fuer curses wieder aufheben
         curses.nocbreak()
         self.input_window.keypad(False)
         curses.echo()
@@ -473,7 +473,7 @@ class KochaUi:
 
     def resize(self):
         """
-        Die Größe des Kocha-Clients anpassen.
+        Die Groeße des Kocha-Clients anpassen.
         """
         # Titel neu zeichnen
         self.draw_title()
@@ -485,7 +485,7 @@ class KochaUi:
         self.messages_window.resize(max_y - 4, max_x)
         self.draw_messages_window()
 
-        # Postion und Größe des Eingabefensters anpassen und
+        # Postion und Groeße des Eingabefensters anpassen und
         # Eingabefenster neu zeichnen
         self.input_window.mvwin(max_y - 3, 0)
         self.input_window.resize(3, max_x)
@@ -494,7 +494,7 @@ class KochaUi:
     @staticmethod
     def show():
         """
-        Wird aufgerufen um das User Interface für den KOCHA-Client
+        Wird aufgerufen um das User Interface fuer den KOCHA-Client
         aufzurufen.
         """
         # Das Gebietsschema auf die Standardeinstellung des Benutzers
