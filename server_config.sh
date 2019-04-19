@@ -9,10 +9,10 @@ PYTHON3=$(which python3)
 CMD="$PYTHON3 -m kocha.server $HOST $PORT"
 
 # Eingehende Anfragen ueber TCP/IP auf Port erlauben
-sudo ufw allow proto tcp from any to any port "$PORT"
+sudo ufw allow proto tcp from 192.168.10.0/24 to any port "$PORT"
 
 # Um die Regel wieder aufzuheben, nachstehenden Befehl ausfuehren
-#sudo ufw delete allow proto tcp from any to any port $PORT
+#sudo ufw delete allow proto tcp from 192.168.10.0/24 to any port $PORT
 
 # Falls noch nicht vorhanden, cron-job einrichten, der den KOCHA-Server
 # beim Booten startet
