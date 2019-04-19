@@ -468,7 +468,7 @@ class KochaUi:
         """
         self.stdscr.clear()
         self.stdscr.addstr(
-            0, 0, " KOCHA-Client " + shared.KOCHA_VERSION, curses.A_REVERSE)
+            0, 0, " KOCHA CLIENT " + shared.KOCHA_VERSION, curses.A_REVERSE)
         self.stdscr.chgat(-1, curses.A_REVERSE)
 
     def resize(self):
