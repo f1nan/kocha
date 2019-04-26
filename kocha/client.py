@@ -11,7 +11,7 @@ import sys
 import threading
 import time
 
-from . import shared
+from kocha import shared
 
 
 class KochaTcpClient(shared.KochaTcpSocketWrapper):

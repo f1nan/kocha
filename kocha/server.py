@@ -8,7 +8,7 @@ import socket
 import sys
 import threading
 
-from . import shared
+from kocha import shared
 
 
 class KochaTcpConnection(shared.KochaTcpSocketWrapper):
@@ -127,7 +127,7 @@ class KochaTcpServer(shared.KochaTcpSocketWrapper):
             except socket.timeout:
                 continue
             except:
-                # Den Client abmelden, da der Socket 
+                # Den Client abmelden, da der Socket
                 # hoechstwahrscheinlich von der anderen Seite einfach
                 # geschlossen wurde
                 self.on_quit(client)
